@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MedScope · 医学影像工作站</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="4" y="4" width="24" height="24" rx="5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+        <circle cx="16" cy="16" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <ellipse cx="16" cy="16" rx="3.2" ry="7.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".7"/>
+        <line x1="16" y1="4" x2="16" y2="9" stroke="currentColor" stroke-width="1.6"/>
+        <line x1="16" y1="23" x2="16" y2="28" stroke="currentColor" stroke-width="1.6"/>
+      </svg>
+    </div>
+    <div class="brand">
+      <h1>MedScope</h1>
+      <p>医学影像工作站 · 影像组学</p>
+    </div>
+  </div>
+
+  <div class="study">
+    <div class="study-line">
+      <b>DEMO^PHANTOM</b>
+      <span class="sep"></span>
+      <span>CT · 头颅</span>
+      <span class="sep"></span>
+      <span>128 × 128 × 128</span>
+      <span class="sep"></span>
+      <span>1.0 mm</span>
+    </div>
+    <div class="study-sub">Shepp–Logan 三维体模 · 叠加模拟病灶（左额叶）</div>
+  </div>
+
+  <div class="hdr-right">
+    <button class="tbtn" id="aiOpen" title="打开 AI 辅助阅片">
+      <svg viewBox="0 0 16 16" class="ai-ico"><path d="M8 1.5l1.3 3.4 3.4 1.3-3.4 1.3L8 10.9 6.7 7.5 3.3 6.2l3.4-1.3L8 1.5z" fill="currentColor" opacity=".9"/><circle cx="13" cy="3" r="1.1" fill="currentColor" opacity=".65"/><circle cx="3" cy="12.5" r="1.1" fill="currentColor" opacity=".65"/></svg>
+      AI 阅片
+      <i class="ai-state" id="aiState"></i>
+    </button>
+    <button class="tbtn" id="btnReset" title="重置十字线与窗宽窗位">重置</button>
+    <button class="tbtn" id="btnCine" title="逐层播放">播放</button>
+    <span class="badge"><i></i>体模数据</span>
+  </div>
+</header>
+
+<main class="workspace">
+  <!-- 左侧工具 -->
+  <aside class="rail">
+    <section class="block">
+      <h3>影像信息</h3>
+      <div class="kv"><span>检查号</span><b class="mono">CT-PH-0142</b></div>
+      <div class="kv"><span>序列</span><b>AXIAL 1.0mm</b></div>
+      <div class="kv"><span>重建</span><b class="mono">128³ · 1.0mm³</b></div>
+      <div class="kv"><span>层数</span><b class="mono">128</b></div>
+    </section>
+
+    <section class="block">
+      <h3>窗宽 / 窗位</h3>
+      <div class="presets">
+        <button data-preset="brain" class="on">脑窗</button>
+        <button data-preset="bone">骨窗</button>
+        <button data-preset="soft">软组织</button>
+        <button data-preset="full">全窗</button>
+      </div>
+      <div class="slider-row">
+        <label>WW</label>
+        <input type="range" id="rngWW" min="10" max="3000" step="5" value="80" />
+        <output id="outWW" class="mono">80</output>
+      </div>
+      <div class="slider-row">
+        <label>WL</label>
+        <input type="range" id="rngWL" min="-1000" max="2500" step="5" value="40" />
+        <output id="outWL" class="mono">40</output>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3>伪彩 LUT</h3>
+      <div class="luts" id="luts">
+        <button data-lut="gray" class="on"><i style="background:linear-gradient(90deg,#000,#fff)"></i><span>灰度</span></button>
+        <button data-lut="bone"><i style="background:linear-gradient(90deg,#0b0806,#8a6a4a,#fff3df)"></i><span>骨</span></button>
+        <button data-lut="hot"><i style="background:linear-gradient(90deg,#000,#a00,#f80,#ff0,#fff)"></i><span>火焰</span></button>
+        <button data-lut="rainbow"><i style="background:linear-gradient(90deg,#0a1f8f,#00b7ff,#22e06b,#ffe600,#ff2d00)"></i><span>彩虹</span></button>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3>工具</h3>
+      <div class="tools">
+        <button id="toolCross" class="on">
+          <svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          十字定位
+        </button>
+        <button id="toolRoi">
+          <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.5 2"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/></svg>
+          圆形 ROI
+        </button>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3>3D 渲染</h3>
+      <div class="presets three">
+        <button data-render="surface" class="on">表面</button>
+        <button data-render="dvr">体绘制</button>
+        <button data-render="mip">MIP</button>
+      </div>
+      <p class="tip">在 3D 视图中拖动旋转，滚轮缩放。</p>
+    </section>
+  </aside>
+
+  <!-- 中央四视图 -->
+  <section class="viewports">
+    <div class="vp" data-view="axial">
+      <canvas id="cvAxial"></canvas>
+      <div class="vp-hud tl"><span class="vp-name">轴位</span><span class="vp-sub">AXIAL</span></div>
+      <div class="vp-hud tr hu" id="huAxial">—</div>
+      <div class="vp-hud bl" id="posAxial">z = 64</div>
+    </div>
+    <div class="vp" data-view="coronal">
+      <canvas id="cvCoronal"></canvas>
+      <div class="vp-hud tl"><span class="vp-name">冠状位</span><span class="vp-sub">CORONAL</span></div>
+      <div class="vp-hud tr hu" id="huCoronal">—</div>
+      <div class="vp-hud bl" id="posCoronal">y = 64</div>
+    </div>
+    <div class="vp" data-view="sagittal">
+      <canvas id="cvSagittal"></canvas>
+      <div class="vp-hud tl"><span class="vp-name">矢状位</span><span class="vp-sub">SAGITTAL</span></div>
+      <div class="vp-hud tr hu" id="huSagittal">—</div>
+      <div class="vp-hud bl" id="posSagittal">x = 64</div>
+    </div>
+    <div class="vp vp3d" data-view="mip">
+      <canvas id="cvMip"></canvas>
+      <div class="vp-hud tl"><span class="vp-name">三维重建</span><span class="vp-sub" id="renderMode">DVR</span></div>
+      <div class="vp-hud tr" id="mipInfo">—</div>
+      <div class="vp-hud bl" id="mipAngles">az 35° / el 20°</div>
+    </div>
+  </section>
+
+  <!-- 右侧影像组学 -->
+  <aside class="rail right">
+    <section class="block">
+      <h3>ROI 影像组学</h3>
+      <button class="tbtn wide" id="btnDemoRoi">放置示例 ROI（病灶区）</button>
+      <div id="roiEmpty" class="roi-empty">
+        <p>在<b>轴位</b>视图上拖动画圆，即可统计该层面的灰度分布特征。</p>
+      </div>
+      <div id="roiPanel" class="hidden">
+        <div class="roi-meta">
+          <span>中心 <b id="roiCenter" class="mono">—</b></span>
+          <span>半径 <b id="roiRadius" class="mono">—</b></span>
+        </div>
+        <canvas id="cvHist" class="hist"></canvas>
+        <div class="feat-list" id="featList"></div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h3>测量</h3>
+      <div class="kv"><span>体素值</span><b class="mono" id="probeHU">—</b></div>
+      <div class="kv"><span>坐标</span><b class="mono" id="probeXYZ">—</b></div>
+      <div class="kv"><span>十字线</span><b class="mono" id="probeCross">64 / 64 / 64</b></div>
+    </section>
+
+    <section class="block">
+      <h3>说明</h3>
+      <p class="tip">体绘制与 MIP 均为前端实时计算（光线投射）。拖动 3D 视图时自动降分辨率预览，松手后精修至全分辨率。</p>
+    </section>
+  </aside>
+</main>
+
+<footer class="foot">
+  <div class="film" id="film"></div>
+  <div class="slice-ctl">
+    <button class="sbtn" id="btnPrev" title="上一层">◀</button>
+    <input type="range" id="sliceRange" min="0" max="127" value="64" />
+    <button class="sbtn" id="btnNext" title="下一层">▶</button>
+    <div class="slice-num">第 <b class="mono" id="sliceNum">64</b> / 128 层</div>
+  </div>
+</footer>
+
+<!-- ================= AI 辅助阅片 ================= -->
+<aside class="ai-drawer" id="aiDrawer" aria-hidden="true">
+  <header class="ai-head">
+    <div class="ai-title">
+      <span class="ai-dot" id="aiDot"></span>
+      <div>
+        <h2>AI 辅助阅片</h2>
+        <p class="ai-mode" id="aiMode">离线模式 · 规则化描述</p>
+      </div>
+    </div>
+    <div class="ai-head-actions">
+      <button class="tbtn" id="aiSettings" title="接口设置">设置</button>
+      <button class="tbtn ai-close" id="aiClose" title="关闭">✕</button>
+    </div>
+  </header>
+
+  <div class="ai-body" id="aiBody"></div>
+
+  <div class="ai-quick" id="aiQuick">
+    <button data-q="describe">描述当前层面</button>
+    <button data-q="roi">ROI 有什么特征</button>
+    <button data-q="advice">下一步建议</button>
+  </div>
+
+  <form class="ai-form" id="aiForm">
+    <textarea id="aiText" rows="1" placeholder="追问，例如：这个高密度区更像什么？"></textarea>
+    <button type="submit" class="ai-send" id="aiSend">发送</button>
+  </form>
+
+  <div class="ai-foot">内容仅供教学演示，不构成诊断意见。图像与数值均来自本地体模数据。</div>
+</aside>
+
+<!-- ================= 接口设置 ================= -->
+<div class="modal" id="aiModal" aria-hidden="true">
+  <div class="modal-card">
+    <h3>多模态接口设置</h3>
+    <p class="tip">
+      使用 OpenAI 兼容协议（<code>/chat/completions</code>，支持图像输入）。Key 仅保存在本机
+      localStorage，不会上传到任何第三方。留空则使用离线规则化报告。
+    </p>
+    <label class="fld">服务商预设
+      <select id="cfgPreset">
+        <option value="gitee">模力方舟 Gitee AI</option>
+        <option value="qwen">阿里通义 Qwen-VL</option>
+        <option value="zhipu">智谱 GLM-4V</option>
+        <option value="ark">火山方舟 豆包视觉</option>
+        <option value="openai">OpenAI GPT-4o</option>
+        <option value="ollama">本地 Ollama（无需 Key）</option>
+        <option value="custom">自定义（OpenAI 兼容）</option>
+      </select>
+    </label>
+    <label class="fld">接口地址 <input id="cfgBase" placeholder="https://…/v1" autocomplete="off" /></label>
+    <label class="fld">模型名称 <input id="cfgModel" placeholder="qwen-vl-max" autocomplete="off" /></label>
+    <label class="fld">API Key <input id="cfgKey" type="password" placeholder="sk-…（本地 Ollama 可留空）" autocomplete="off" /></label>
+    <div class="modal-test">
+      <button class="tbtn" id="cfgTest">测试连接</button>
+      <span class="test-result" id="cfgTestResult"></span>
+    </div>
+    <div class="modal-actions">
+      <button class="tbtn" id="cfgClear">清除配置</button>
+      <span class="grow"></span>
+      <button class="tbtn" id="cfgCancel">取消</button>
+      <button class="tbtn primary" id="cfgSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
