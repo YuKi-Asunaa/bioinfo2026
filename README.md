@@ -110,6 +110,19 @@ python -m http.server 8000
 - 统计量（Welch t 检验所需分布、RSCU、ENC、PCA、层次聚类）均为独立实现
 - `serve.cjs` 仅 100 余行，用于本地预览与规避 `file://` 跨域
 
+## 安全
+
+仓库自带 `.githooks/pre-commit`：提交前扫描暂存区里的常见密钥格式
+（`sk-…`、`ghp_…`、`AKIA…`、私钥头等），命中即阻止提交。
+
+克隆后启用一次：
+
+```bash
+git config core.hooksPath .githooks
+```
+
+误报时可用 `git commit --no-verify` 跳过。
+
 ## 已知限制
 
 - 影像为合成体模，**不是真实病例**，任何结论都没有临床意义
